@@ -15,7 +15,7 @@
 - 😊 **情绪记录器**：记录任务完成后的情绪状态，分析效率与心情关系
 - 📈 **习惯追踪**：每日打卡并可视化展示行为趋势
 
-本项目主要使用 React + Vite + Tailwind CSS 开发，支持离线使用（基于 localStorage&IndexedDB），后续支持接入 Firebase/Supabase 实现跨设备同步。
+本项目主要使用 React + Vite  开发，支持离线使用（基于 localStorage&IndexedDB），后续支持接入 Firebase/Supabase 实现跨设备同步。
 
 ---
 
@@ -24,12 +24,12 @@
 | 技术点 | 描述 |
 |--------|------|
 | 🧭 模块化前端架构 | 每个核心功能均为独立组件模块，解耦、易维护 |
-| 📦 状态管理 | 使用 Zustand 管理全局任务、笔记等状态数据 |
+| 📦 状态管理 | 使用 React context 管理全局任务、笔记等状态数据 |
 | 🧠 富文本 + Markdown 支持 | 使用 `react-markdown` 构建灵活的笔记编辑器 |
 | 📊 数据可视化 | 使用 Chart.js 展示分心频率与情绪趋势图 |
 | 🧩 拖拽交互 | 使用 react-beautiful-dnd 实现任务拖拽分类与排序 |
 | 🗂️ 本地持久化 | 全模块支持 localStorage 自动保存用户数据 |
-| ✨ 响应式设计 + 动画 | Tailwind + Framer Motion 实现流畅过渡与美观布局 |
+| ✨ 响应式设计 + 动画 | React Bits + Framer Motion 实现流畅过渡与美观布局 |
 
 ---
 
@@ -37,17 +37,48 @@
 
 ```bash
 LumenTrack/
-├── public/
+│
+├── public/                  # 静态资源
+│   └── vite.svg
+│
 ├── src/
-│   ├── components/        # 公共组件（任务卡、弹窗、按钮等）
-│   ├── pages/             # 页面模块（任务页、笔记页、专注页等）
-│   ├── store/             # Zustand 状态管理模块
-│   ├── utils/             # 时间/排序/导出等工具函数
-│   ├── hooks/             # 自定义 Hooks（如 useFocusTimer）
-│   └── App.jsx            # 顶级布局 + 路由入口
+│   ├── assets/              # 图片等静态资源
+│   │   ├── logoLight.png
+│   │   ├── react.svg
+│   │   └── welcomeImage.png
+│   │
+│   ├── compoments/          # 可复用组件（如按钮、输入框等）
+│   │   └── ...              
+│   │
+│   ├── contexts/            # 全局状态管理
+│   │   └── modeContext.jsx  # 主题/语言Context
+│   │
+│   ├── locales/             # 多语言文本
+│   │   ├── zh-CN.js
+│   │   └── en-US.js
+│   │
+│   ├── theme/               # 主题配置
+│   │   └── theme.js         # 明暗主题变量
+│   │
+│   ├── page/                # 页面组件
+│   │   ├── welcomePage.jsx
+│   │   └── welcomePage.css
+│   │
+│   ├── utils/               # 工具函数
+│   │   └── ...
+│   │
+│   ├── App.jsx              # 根组件，包裹Provider
+│   ├── main.jsx             # 入口文件
+│   ├── App.css
+│   └── index.css
+│
 ├── index.html
-├── tailwind.config.js
-└── vite.config.js
+├── package.json
+├── package-lock.json
+├── vite.config.js
+├── eslint.config.js
+└── README.md
+```
 
 ## 👨‍💻 作者 & 技术展示目的
 
