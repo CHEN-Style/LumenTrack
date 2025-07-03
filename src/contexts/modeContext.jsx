@@ -4,7 +4,7 @@ export const ModeContext = createContext();
 
 export const ModeProvider = ({ children }) => {
   const [mode, setMode] = useState('light');
-  const [language, setLanguage] = useState('zh-CN');
+  const [language, setLanguage] = useState('en-US');
 
   const toggleMode = () => setMode((prev) => (prev === 'light' ? 'dark' : 'light'));
   const toggleLanguage = () => setLanguage((prev) => (prev === 'zh-CN' ? 'en-US' : 'zh-CN'));

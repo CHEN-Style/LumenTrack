@@ -6,6 +6,7 @@ import styled from 'styled-components';
 import { useMode } from '../contexts/modeContext';
 import zhCN from '../locales/zh-CN';
 import enUS from '../locales/en-US';
+import { useNavigate } from "react-router-dom";
 
 import logo from '../assets/logoLight.png';
 import welcomeImage from '../assets/welcomeImage.png';
@@ -45,6 +46,9 @@ const Nav = styled.nav`
   width: 100%;
   height: 260px;
   padding: 0 80px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 `
 
 const Footer = styled.footer`
@@ -92,13 +96,64 @@ const IconContainer = styled.div`
   justify-content: center;
   align-items: center;
   background-color: #393E46;
+  transition: all 0.3s ease;
+`
+
+const CardsContainer = styled.div`
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 30px;
+  width: 100%;
+  max-width: 1200px;
+`
+
+const Card = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  background-color: ${({ theme }) => theme.cardBackground};
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  
+  &:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    
+    ${IconContainer} {
+      transform: scale(1.1);
+      box-shadow: 0 4px 15px rgba(57, 62, 70, 0.3);
+    }
+  }
+`
+
+const CardContent = styled.div`
+  margin-left: 16px;
+  flex: 1;
+`
+
+const CardTitle = styled.h3`
+  font-size: 18px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.text};
+  margin: 0 0 8px 0;
+  line-height: 1.2;
+`
+
+const CardDescription = styled.p`
+  font-size: 14px;
+  color: ${({ theme }) => theme.secondaryText};
+  margin: 0;
+  line-height: 1.4;
+  opacity: 0.8;
 `
 
 export default function WelcomePage() {
   const theme = useTheme()
   const { mode, toggleMode, language, toggleLanguage } = useMode();
   const text = language === 'zh-CN' ? zhCN : enUS;
-
+  const navigate = useNavigate();
   return (
     <WelcomePageContainer>
       <Header>
@@ -120,11 +175,47 @@ export default function WelcomePage() {
         </Display>
       </Main>
       <Nav>
-        <div>
-          <IconContainer>
-            <TodoListIcon width={30} height={30} fill={theme.background} />
-          </IconContainer>
-        </div>
+        <CardsContainer>
+          <Card onClick={() => navigate('/todo')}>
+            <IconContainer>
+              <TodoListIcon width={30} height={30} fill={theme.background} />
+            </IconContainer>
+            <CardContent>
+              <CardTitle>{text.todoTitle}</CardTitle>
+              <CardDescription>{text.todoDescription}</CardDescription>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <IconContainer>
+              <TodoListIcon width={30} height={30} fill={theme.background} />
+            </IconContainer>
+            <CardContent>
+              <CardTitle>{text.moodTitle}</CardTitle>
+              <CardDescription>{text.moodDescription}</CardDescription>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <IconContainer>
+              <TodoListIcon width={30} height={30} fill={theme.background} />
+            </IconContainer>
+            <CardContent>
+              <CardTitle>{text.noteTitle}</CardTitle>
+              <CardDescription>{text.noteDescription}</CardDescription>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <IconContainer>
+              <TodoListIcon width={30} height={30} fill={theme.background} />
+            </IconContainer>
+            <CardContent>
+              <CardTitle>{text.analyticsTitle}</CardTitle>
+              <CardDescription>{text.analyticsDescription}</CardDescription>
+            </CardContent>
+          </Card>
+        </CardsContainer>
       </Nav>
       <Footer> </Footer>
     </WelcomePageContainer>
