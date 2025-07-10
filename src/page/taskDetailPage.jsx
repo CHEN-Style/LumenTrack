@@ -292,6 +292,7 @@ const StepInput = styled.input`
 
 const ButtonGroup = styled.div`
   display: flex;
+  flex-direction: column;
   gap: 16px;
   margin-top: 40px;
   padding-top: 32px;
@@ -308,6 +309,11 @@ const ButtonGroup = styled.div`
     height: 1px;
     background: linear-gradient(90deg, transparent, ${props => props.theme.secondaryText}40, transparent);
   }
+`;
+
+const MainButtons = styled.div`
+  display: flex;
+  gap: 16px;
 `;
 
 const Button = styled.button`
@@ -367,6 +373,102 @@ const Button = styled.button`
   }
 `;
 
+// 删除确认弹窗样式
+const DeleteConfirmOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  animation: ${fadeIn} 0.2s ease-out;
+`;
+
+const DeleteConfirmModal = styled.div`
+  background: ${props => props.theme.cardBackground};
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  border: 1px solid ${props => props.theme.secondaryText}20;
+  animation: ${slideIn} 0.2s ease-out;
+`;
+
+const DeleteConfirmTitle = styled.h3`
+  margin: 0 0 16px 0;
+  color: #e74c3c;
+  font-size: 18px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &::before {
+    content: '⚠️';
+    font-size: 20px;
+  }
+`;
+
+const DeleteConfirmMessage = styled.p`
+  margin: 0 0 24px 0;
+  color: ${props => props.theme.text};
+  line-height: 1.5;
+  font-size: 14px;
+`;
+
+const DeleteConfirmButtons = styled.div`
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+`;
+
+const DeleteButton = styled.button`
+  flex: 1;
+  padding: 16px 32px;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+  box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s ease;
+  }
+  
+  &:hover::before {
+    left: 100%;
+  }
+  
+  &:hover {
+    background: linear-gradient(135deg, #c0392b, #a93226);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 25px rgba(231, 76, 60, 0.4);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
 export default function TaskDetailModal({ task, isOpen, onClose, onSave }) {
   const theme = useTheme();
   const { language } = useMode();
@@ -375,6 +477,7 @@ export default function TaskDetailModal({ task, isOpen, onClose, onSave }) {
   const [formData, setFormData] = useState({
     title: '',
     content: '',
+    deadline: '',
     steps: [
       { text: '', done: false },
       { text: '', done: false },
@@ -382,11 +485,23 @@ export default function TaskDetailModal({ task, isOpen, onClose, onSave }) {
     ]
   });
 
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
   useEffect(() => {
     if (task && isOpen) {
+      // 格式化deadline为datetime-local格式
+      let deadlineValue = '';
+      if (task.deadline) {
+        const date = new Date(task.deadline);
+        if (!isNaN(date.getTime())) {
+          deadlineValue = date.toISOString().slice(0, 16);
+        }
+      }
+      
       setFormData({
         title: task.title || '',
         content: task.content || '',
+        deadline: deadlineValue,
         steps: task.steps?.length === 3 ? task.steps : [
           { text: task.steps?.[0]?.text || '', done: task.steps?.[0]?.done || false },
           { text: task.steps?.[1]?.text || '', done: task.steps?.[1]?.done || false },
@@ -412,11 +527,34 @@ export default function TaskDetailModal({ task, isOpen, onClose, onSave }) {
   };
 
   const handleSave = () => {
+    // 处理deadline数据 - 转换为ISO字符串或null
+    const processedFormData = {
+      ...formData,
+      deadline: formData.deadline ? new Date(formData.deadline).toISOString() : null
+    };
+    
     onSave({
       ...task,
-      ...formData
+      ...processedFormData
     });
     onClose();
+  };
+
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    onSave({
+      ...task,
+      deleted: true
+    });
+    setShowDeleteConfirm(false);
+    onClose();
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteConfirm(false);
   };
 
   if (!isOpen) return null;
@@ -453,6 +591,24 @@ export default function TaskDetailModal({ task, isOpen, onClose, onSave }) {
           </FormGroup>
 
           <FormGroup>
+            <Label>{t.taskDetail.deadline}</Label>
+            <Input
+              type="datetime-local"
+              lang="en"
+              value={formData.deadline}
+              onChange={(e) => setFormData(prev => ({ ...prev, deadline: e.target.value }))}
+            />
+            <div style={{ 
+              fontSize: '12px', 
+              color: theme.secondaryText, 
+              marginTop: '8px',
+              fontStyle: 'italic'
+            }}>
+              {t.taskDetail.deadlineNote}
+            </div>
+          </FormGroup>
+
+          <FormGroup>
             <Label>{t.taskDetail.steps}</Label>
             <StepsSection>
               {formData.steps.map((step, index) => (
@@ -477,15 +633,42 @@ export default function TaskDetailModal({ task, isOpen, onClose, onSave }) {
           </FormGroup>
 
           <ButtonGroup>
-            <Button onClick={onClose}>
-              {t.taskDetail.cancel}
-            </Button>
-            <Button primary onClick={handleSave}>
-              {t.taskDetail.save}
-            </Button>
+            <DeleteButton onClick={handleDeleteClick}>
+              {t.taskDetail.delete}
+            </DeleteButton>
+            <MainButtons>
+              <Button onClick={onClose}>
+                {t.taskDetail.cancel}
+              </Button>
+              <Button primary onClick={handleSave}>
+                {t.taskDetail.save}
+              </Button>
+            </MainButtons>
           </ButtonGroup>
         </Content>
       </Modal>
+      
+      {/* 删除确认弹窗 */}
+      {showDeleteConfirm && (
+        <DeleteConfirmOverlay onClick={(e) => e.target === e.currentTarget && handleDeleteCancel()}>
+          <DeleteConfirmModal>
+            <DeleteConfirmTitle>
+              {t.taskDetail.deleteConfirm}
+            </DeleteConfirmTitle>
+            <DeleteConfirmMessage>
+              {t.taskDetail.deleteMessage}
+            </DeleteConfirmMessage>
+            <DeleteConfirmButtons>
+              <Button onClick={handleDeleteCancel}>
+                {t.taskDetail.cancelDelete}
+              </Button>
+              <DeleteButton onClick={handleDeleteConfirm}>
+                {t.taskDetail.confirmDelete}
+              </DeleteButton>
+            </DeleteConfirmButtons>
+          </DeleteConfirmModal>
+        </DeleteConfirmOverlay>
+      )}
     </Overlay>
   );
 }

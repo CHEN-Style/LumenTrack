@@ -22,9 +22,13 @@ export default {
     createTask: "Create Task",
     pendingTasks: "Pending Tasks",
     priorityMatrix: "Task Priority Matrix",
-    loading: "Loading tasks...",
+    loading: "Loading...",
+    dragError: "Drag operation failed, please try again",
+    taskDetails: "Task Details",
     noTasks: "No tasks yet, create a new one to get started!",
     dropHere: "Drag tasks here",
+    refreshPage: "Refresh Page",
+    refreshTooltip: "Click when task cards have bugs",
     
     // Quadrant titles
     quadrant1: "🟥 Quadrant 1: Do First",
@@ -46,12 +50,30 @@ export default {
     editTask: "Edit Task",
     editDescription: "Modify task details and execution steps",
     title: "Task Title",
-    titlePlaceholder: "Enter task title...",
-    content: "Description",
-    contentPlaceholder: "Enter detailed description...",
-    steps: "Steps",
+    content: "Detailed Description",
+    steps: "Execution Steps",
+    deadline: "Deadline",
     step: "Step",
     cancel: "Cancel",
-    save: "Save Changes"
+    save: "Save Changes",
+    delete: "Delete Task",
+    titlePlaceholder: "Enter task title...",
+    contentPlaceholder: "Enter detailed description and notes...",
+    deadlineNote: "Set task deadline (optional)",
+    
+    // Delete confirmation dialog
+    deleteConfirm: "Confirm Delete",
+    deleteMessage: "Are you sure you want to delete this task? This action cannot be undone.",
+    confirmDelete: "Confirm Delete",
+    cancelDelete: "Cancel"
+  },
+
+  // Countdown text
+  countdown: {
+    daysLeft: " days ",
+    hoursLeft: " hours ",
+    minutesLeft: " minutes ", 
+    overdue: "Overdue ",
+    overdueHours: " hours "
   }
 }

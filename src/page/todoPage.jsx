@@ -11,9 +11,45 @@ import {
   updateTask, 
   getMaxOrderInQuadrant,
   updateTasksOrder,
-  toggleTaskCompleted
+  toggleTaskCompleted,
+  deleteTask
 } from '../db/db.js';
 import TaskDetailModal from './taskDetailPage.jsx';
+
+// 倒计时组件
+const CountdownBadge = styled.div`
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: ${props => props.overdue ? '#e74c3c' : '#3498db'};
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.8) translateY(4px);
+  transition: all 0.3s ease;
+
+  ${props => props.show && `
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  `}
+`;
+
+// 任务卡片容器组件  
+const TaskCardContainer = styled.div`
+  position: relative;
+  
+  &:hover ${CountdownBadge} {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+`;
 
 const Container = styled.div`
   display: flex;
@@ -228,9 +264,6 @@ const EmptyState = styled.div`
 `;
 
 const LanguageToggle = styled.button`
-  position: fixed;
-  bottom: 20px;
-  left: 20px;
   background: ${props => props.theme.cardBackground};
   border: 1px solid ${props => props.theme.secondaryText}30;
   border-radius: 8px;
@@ -256,6 +289,80 @@ const LanguageToggle = styled.button`
   }
 `;
 
+// 底部按钮容器
+const BottomButtonsContainer = styled.div`
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+`;
+
+// 刷新按钮
+const RefreshButton = styled.button`
+  background: ${props => props.theme.cardBackground};
+  border: 1px solid ${props => props.theme.secondaryText}30;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: ${props => props.theme.text};
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px ${props => props.theme.secondaryText}20;
+  position: relative;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px ${props => props.theme.secondaryText}30;
+    border-color: #27ae60;
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+// 提示气泡
+const Tooltip = styled.div`
+  position: absolute;
+  bottom: 100%;
+  left: 100%;
+  margin-bottom: 8px;
+  margin-left: -20px;
+  background: ${props => props.theme.cardBackground};
+  border: 1px solid ${props => props.theme.secondaryText}30;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: ${props => props.theme.text};
+  font-size: 11px;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px ${props => props.theme.secondaryText}40;
+  opacity: 0;
+  transform: translateY(4px) scale(0.95);
+  transition: all 0.3s ease;
+  pointer-events: none;
+  z-index: 1000;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 20px;
+    border: 6px solid transparent;
+    border-top-color: ${props => props.theme.cardBackground};
+  }
+
+  ${props => props.show && `
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  `}
+`;
+
 export default function TodoPage() {
   const theme = useTheme()
   const { language, toggleLanguage } = useMode()
@@ -272,6 +379,71 @@ export default function TodoPage() {
   const [loading, setLoading] = useState(true)
   const [selectedTask, setSelectedTask] = useState(null)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  const [currentTime, setCurrentTime] = useState(new Date())
+  const [showRefreshTooltip, setShowRefreshTooltip] = useState(false)
+
+  // 定时器用于更新倒计时
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 60000) // 每分钟更新一次
+
+    return () => clearInterval(timer)
+  }, [])
+
+  // 刷新页面功能
+  const handleRefreshPage = () => {
+    window.location.reload()
+  }
+
+  // 计算倒计时或超时信息
+  const getDeadlineInfo = (deadline) => {
+    if (!deadline) return null;
+    
+    const now = currentTime;
+    const deadlineDate = new Date(deadline);
+    const diffMs = deadlineDate.getTime() - now.getTime();
+    
+    if (diffMs < 0) {
+      // 已超时
+      const overdueHours = Math.floor(Math.abs(diffMs) / (1000 * 60 * 60));
+      if (overdueHours < 24) {
+        return {
+          text: `${t.countdown.overdue} ${overdueHours}${t.countdown.overdueHours}`,
+          overdue: true
+        };
+      } else {
+        const overdueDays = Math.floor(overdueHours / 24);
+        const remainingHours = overdueHours % 24;
+        return {
+          text: `${t.countdown.overdue} ${overdueDays}${t.countdown.daysLeft}${remainingHours > 0 ? remainingHours + t.countdown.hoursLeft : ''}`,
+          overdue: true
+        };
+      }
+    } else {
+      // 未超时
+      const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      
+      if (days > 0) {
+        return {
+          text: `${days}${t.countdown.daysLeft}${hours > 0 ? hours + t.countdown.hoursLeft : ''}`,
+          overdue: false
+        };
+      } else if (hours > 0) {
+        return {
+          text: `${hours}${t.countdown.hoursLeft}${minutes > 0 && hours < 3 ? minutes + t.countdown.minutesLeft : ''}`,
+          overdue: false
+        };
+      } else {
+        return {
+          text: `${minutes}${t.countdown.minutesLeft}`,
+          overdue: false
+        };
+      }
+    }
+  };
 
   const quadrantConfig = {
     Q1: {
@@ -383,20 +555,38 @@ export default function TodoPage() {
 
   const handleSaveTaskDetail = async (updatedTask) => {
     try {
-      await updateTask(updatedTask.id, updatedTask)
-      
-      // 更新本地状态
-      if (updatedTask.quadrant === 'none') {
-        setTasks(prev => prev.map(task => 
-          task.id === updatedTask.id ? updatedTask : task
-        ))
+      // 检查是否是删除操作
+      if (updatedTask.deleted) {
+        await deleteTask(updatedTask.id)
+        
+        // 从本地状态中移除任务
+        if (updatedTask.quadrant === 'none') {
+          setTasks(prev => prev.filter(task => task.id !== updatedTask.id))
+        } else {
+          setQuadrants(prev => ({
+            ...prev,
+            [updatedTask.quadrant]: prev[updatedTask.quadrant].filter(task =>
+              task.id !== updatedTask.id
+            )
+          }))
+        }
       } else {
-        setQuadrants(prev => ({
-          ...prev,
-          [updatedTask.quadrant]: prev[updatedTask.quadrant].map(task =>
+        // 正常的更新操作
+        await updateTask(updatedTask.id, updatedTask)
+        
+        // 更新本地状态
+        if (updatedTask.quadrant === 'none') {
+          setTasks(prev => prev.map(task => 
             task.id === updatedTask.id ? updatedTask : task
-          )
-        }))
+          ))
+        } else {
+          setQuadrants(prev => ({
+            ...prev,
+            [updatedTask.quadrant]: prev[updatedTask.quadrant].map(task =>
+              task.id === updatedTask.id ? updatedTask : task
+            )
+          }))
+        }
       }
     } catch (error) {
       console.error('Failed to save task details:', error)
@@ -432,12 +622,12 @@ export default function TodoPage() {
   const handleDragEnd = async (result) => {
     const { destination, source, draggableId } = result
 
-    // 如果没有目标位置，取消拖拽
+    // 如果没有目标位置，直接返回（@hello-pangea/dnd会自动恢复位置）
     if (!destination) {
       return
     }
 
-    // 如果拖拽到同一位置，取消拖拽
+    // 如果拖拽到同一位置，直接返回
     if (
       destination.droppableId === source.droppableId &&
       destination.index === source.index
@@ -445,30 +635,40 @@ export default function TodoPage() {
       return
     }
 
+    // 保存当前状态以备回滚
+    const currentTasks = [...tasks]
+    const currentQuadrants = { ...quadrants }
+
     try {
       // 从待分配任务拖拽到象限
       if (source.droppableId === 'tasks') {
-        await handleDropFromTasks(draggableId, destination)
+        await handleDropFromTasks(draggableId, destination, currentTasks, currentQuadrants)
       }
       // 象限内重新排序
       else if (source.droppableId === destination.droppableId) {
-        await handleReorderWithinQuadrant(source, destination, draggableId)
+        await handleReorderWithinQuadrant(source, destination, draggableId, currentQuadrants)
       }
       // 在象限之间移动
       else {
-        await handleMoveBetweenQuadrants(source, destination, draggableId)
+        await handleMoveBetweenQuadrants(source, destination, draggableId, currentQuadrants)
       }
     } catch (error) {
       console.error('Failed to handle drag end:', error)
+      // 恢复到拖拽前的状态
+      setTasks(currentTasks)
+      setQuadrants(currentQuadrants)
+      // 可以添加用户友好的错误提示
+      // alert(t.todoPage.dragError || '拖拽操作失败，请重试')
+      alert(t.todoPage.dragError || '拖拽操作失败，请重试')
     }
   }
 
-  const handleDropFromTasks = async (taskId, destination) => {
-    const task = tasks.find(t => t.id === taskId)
-    if (!task) return
+  const handleDropFromTasks = async (taskId, destination, currentTasks, currentQuadrants) => {
+    const task = currentTasks.find(t => t.id === taskId)
+    if (!task) throw new Error('Task not found')
 
     const targetQuadrant = destination.droppableId
-    const targetTasks = [...quadrants[targetQuadrant]]
+    const targetTasks = [...currentQuadrants[targetQuadrant]]
     
     // 计算新的order值
     const updates = []
@@ -491,11 +691,12 @@ export default function TodoPage() {
       }
     }
     
+    // 先更新数据库
     await updateTasksOrder(updates)
     
-    // 更新本地状态
+    // 数据库更新成功后再更新UI状态
     const updatedTask = { ...task, quadrant: targetQuadrant, order: updates.find(u => u.id === task.id).order }
-    setTasks(tasks.filter(t => t.id !== taskId))
+    setTasks(currentTasks.filter(t => t.id !== taskId))
     
     const newTargetTasks = [...targetTasks]
     newTargetTasks.splice(destination.index, 0, updatedTask)
@@ -505,9 +706,9 @@ export default function TodoPage() {
     }))
   }
 
-  const handleReorderWithinQuadrant = async (source, destination, taskId) => {
+  const handleReorderWithinQuadrant = async (source, destination, taskId, currentQuadrants) => {
     const quadrantId = source.droppableId
-    const quadrantTasks = [...quadrants[quadrantId]]
+    const quadrantTasks = [...currentQuadrants[quadrantId]]
     
     // 移动任务到新位置
     const [movedTask] = quadrantTasks.splice(source.index, 1)
@@ -519,21 +720,22 @@ export default function TodoPage() {
       order: index + 1
     }))
     
+    // 先更新数据库
     await updateTasksOrder(updates)
     
-    // 更新本地状态
+    // 数据库更新成功后再更新UI状态
     setQuadrants(prev => ({
       ...prev,
       [quadrantId]: quadrantTasks
     }))
   }
 
-  const handleMoveBetweenQuadrants = async (source, destination, taskId) => {
+  const handleMoveBetweenQuadrants = async (source, destination, taskId, currentQuadrants) => {
     const sourceQuadrant = source.droppableId
     const targetQuadrant = destination.droppableId
     
-    const sourceTasks = [...quadrants[sourceQuadrant]]
-    const targetTasks = [...quadrants[targetQuadrant]]
+    const sourceTasks = [...currentQuadrants[sourceQuadrant]]
+    const targetTasks = [...currentQuadrants[targetQuadrant]]
     
     // 移除源任务
     const [movedTask] = sourceTasks.splice(source.index, 1)
@@ -559,9 +761,10 @@ export default function TodoPage() {
       })
     })
     
+    // 先更新数据库
     await updateTasksOrder(updates)
     
-    // 更新本地状态
+    // 数据库更新成功后再更新UI状态
     setQuadrants(prev => ({
       ...prev,
       [sourceQuadrant]: sourceTasks,
@@ -607,7 +810,7 @@ export default function TodoPage() {
             </CreateButton>
           </InputSection>
 
-          <div>
+    <div>
             <h3 style={{ margin: '0 0 15px 0' }}>{t.todoPage.pendingTasks} ({tasks.length})</h3>
             <Droppable droppableId="tasks">
               {(provided, snapshot) => (
@@ -618,41 +821,56 @@ export default function TodoPage() {
                     background: snapshot.isDraggingOver ? 
                       `${theme.secondaryText}10` : 'transparent',
                     borderRadius: '8px',
-                    transition: 'background 0.2s ease'
+                    transition: 'background 0.2s ease',
+                    minHeight: '100px'
                   }}
                 >
-                  {tasks.map((task, index) => (
-                    <Draggable key={task.id} draggableId={task.id} index={index}>
-                      {(provided, snapshot) => (
-                        <TaskCard
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          completed={task.completed}
-                          style={{
-                            ...provided.draggableProps.style,
-                            opacity: snapshot.isDragging ? 0.8 : 1,
-                            transform: snapshot.isDragging ? 
-                              `${provided.draggableProps.style?.transform} rotate(3deg)` : 
-                              provided.draggableProps.style?.transform
-                          }}
-                        >
-                          <TaskCheckbox
-                            type="checkbox"
-                            checked={task.completed || false}
-                            onChange={(e) => handleToggleCompleted(e, task.id, 'tasks')}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                          <TaskContent 
-                            completed={task.completed}
-                            onClick={() => handleTaskClick(task)}
-                          >
-                            {task.title}
-                          </TaskContent>
-                        </TaskCard>
-                      )}
-                    </Draggable>
-                  ))}
+                  {tasks.map((task, index) => {
+                    const deadlineInfo = getDeadlineInfo(task.deadline);
+                    return (
+                      <Draggable key={task.id} draggableId={task.id} index={index}>
+                        {(provided, snapshot) => (
+                          <TaskCardContainer>
+                            <TaskCard
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              completed={task.completed}
+                              style={{
+                                ...provided.draggableProps.style,
+                                opacity: snapshot.isDragging ? 0.8 : 1,
+                                transform: snapshot.isDragging ? 
+                                  `${provided.draggableProps.style?.transform} rotate(3deg)` : 
+                                  provided.draggableProps.style?.transform,
+                                zIndex: snapshot.isDragging ? 1000 : 'auto'
+                              }}
+                            >
+                              <TaskCheckbox
+                                type="checkbox"
+                                checked={task.completed || false}
+                                onChange={(e) => handleToggleCompleted(e, task.id, 'tasks')}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              <TaskContent 
+                                completed={task.completed}
+                                onClick={() => handleTaskClick(task)}
+                              >
+                                {task.title}
+                              </TaskContent>
+                            </TaskCard>
+                            {deadlineInfo && (
+                              <CountdownBadge 
+                                overdue={deadlineInfo.overdue}
+                                show={true}
+                              >
+                                {deadlineInfo.text}
+                              </CountdownBadge>
+                            )}
+                          </TaskCardContainer>
+                        )}
+                      </Draggable>
+                    );
+                  })}
                   {provided.placeholder}
                   {tasks.length === 0 && (
                     <EmptyState>
@@ -685,7 +903,7 @@ export default function TodoPage() {
                   marginBottom: '15px' 
                 }}>
                   {config.subtitle}
-                </div>
+    </div>
                 
                 <Droppable droppableId={quadrantId}>
                   {(provided, snapshot) => (
@@ -698,41 +916,55 @@ export default function TodoPage() {
                         borderRadius: '8px',
                         padding: '8px',
                         transition: 'background 0.2s ease',
-                        minHeight: '60px'
+                        minHeight: '80px'
                       }}
                     >
-                      {quadrants[quadrantId].map((task, index) => (
-                        <Draggable key={task.id} draggableId={task.id} index={index}>
-                          {(provided, snapshot) => (
-                            <QuadrantTask
-                              ref={provided.innerRef}
-                              {...provided.draggableProps}
-                              {...provided.dragHandleProps}
-                              completed={task.completed}
-                              style={{
-                                ...provided.draggableProps.style,
-                                opacity: snapshot.isDragging ? 0.8 : 1,
-                                transform: snapshot.isDragging ? 
-                                  `${provided.draggableProps.style?.transform} rotate(2deg)` : 
-                                  provided.draggableProps.style?.transform
-                              }}
-                            >
-                              <QuadrantTaskCheckbox
-                                type="checkbox"
-                                checked={task.completed || false}
-                                onChange={(e) => handleToggleCompleted(e, task.id, quadrantId)}
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                              <QuadrantTaskContent 
-                                completed={task.completed}
-                                onClick={() => handleTaskClick(task)}
-                              >
-                                {task.title}
-                              </QuadrantTaskContent>
-                            </QuadrantTask>
-                          )}
-                        </Draggable>
-                      ))}
+                      {quadrants[quadrantId].map((task, index) => {
+                        const deadlineInfo = getDeadlineInfo(task.deadline);
+                        return (
+                          <Draggable key={task.id} draggableId={task.id} index={index}>
+                            {(provided, snapshot) => (
+                              <TaskCardContainer>
+                                <QuadrantTask
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  completed={task.completed}
+                                  style={{
+                                    ...provided.draggableProps.style,
+                                    opacity: snapshot.isDragging ? 0.8 : 1,
+                                    transform: snapshot.isDragging ? 
+                                      `${provided.draggableProps.style?.transform} rotate(2deg)` : 
+                                      provided.draggableProps.style?.transform,
+                                    zIndex: snapshot.isDragging ? 1000 : 'auto'
+                                  }}
+                                >
+                                  <QuadrantTaskCheckbox
+                                    type="checkbox"
+                                    checked={task.completed || false}
+                                    onChange={(e) => handleToggleCompleted(e, task.id, quadrantId)}
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                  <QuadrantTaskContent 
+                                    completed={task.completed}
+                                    onClick={() => handleTaskClick(task)}
+                                  >
+                                    {task.title}
+                                  </QuadrantTaskContent>
+                                </QuadrantTask>
+                                {deadlineInfo && (
+                                  <CountdownBadge 
+                                    overdue={deadlineInfo.overdue}
+                                    show={true}
+                                  >
+                                    {deadlineInfo.text}
+                                  </CountdownBadge>
+                                )}
+                              </TaskCardContainer>
+                            )}
+                          </Draggable>
+                        );
+                      })}
                       {provided.placeholder}
                       {quadrants[quadrantId].length === 0 && (
                         <EmptyState>
@@ -747,11 +979,25 @@ export default function TodoPage() {
           </MatrixContainer>
         </RightPanel>
         
-        {/* 语言切换按钮 */}
-        <LanguageToggle onClick={toggleLanguage}>
-          <span>🌐</span>
-          <span>{language === 'zh-CN' ? 'EN' : '中文'}</span>
-        </LanguageToggle>
+        {/* 底部按钮组 */}
+        <BottomButtonsContainer>
+          <LanguageToggle onClick={toggleLanguage}>
+            <span>🌐</span>
+            <span>{language === 'zh-CN' ? 'EN' : '中文'}</span>
+          </LanguageToggle>
+          
+          <RefreshButton
+            onClick={handleRefreshPage}
+            onMouseEnter={() => setShowRefreshTooltip(true)}
+            onMouseLeave={() => setShowRefreshTooltip(false)}
+          >
+            <span>🔄</span>
+            <span>{t.todoPage.refreshPage}</span>
+            <Tooltip show={showRefreshTooltip}>
+              {t.todoPage.refreshTooltip}
+            </Tooltip>
+          </RefreshButton>
+        </BottomButtonsContainer>
 
         {/* 任务详情模态框 */}
         <TaskDetailModal
