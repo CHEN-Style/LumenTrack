@@ -6,6 +6,6 @@ export default defineConfig({
   plugins: [react()],
   base: "/LumenTrack/",
   build: {
-    outDir: "dist",
+    outDir: "docs",
   }
 })
