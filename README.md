@@ -7,7 +7,9 @@
 
 ## 项目进度
 
-> 目前已完成**任务优先级矩阵**第一版的开发，如果您想在本地部署，需要安装vscode，clone这个repo，然后在终端中输入指令npm install，安装完成后输入第二个指令，npm run dev进行本地运行，如果您有任何其他问题，可以通过我的邮箱联系我：chenstyle2022@outlook.com
+- 目前已完成**任务优先级矩阵**第一版的开发，您可以访问 lumen-track-gamma.vercel.app 来体验，注意请点击左下角的Task Management来体验优先级矩阵，其他功能仍在开发中
+- **拖拽功能仍存在bug**：您在拖拽任务卡时，有时会遇到卡片静止在页面中无法正常回到原来的位置，请点击左下角的Refresh Page进行重置，该bug正在修复中
+- 如果您想在本地部署，需要安装vscode，clone这个repo，然后在终端中输入指令npm install，安装完成后输入第二个指令，npm run dev进行本地运行，如果您有任何其他问题，可以通过我的邮箱联系我：chenstyle2022@outlook.com
 
 
 ## 🧠 项目概述
